@@ -249,20 +249,20 @@ const LoadForecastChart = () => {
     }, [selectedDate]);
 
   // =========================================================
-  // 24 HOUR CATEGORIES
+  // 15-MINUTE CATEGORIES
   // =========================================================
 
   const categories = useMemo(() => {
     return Array.from(
-      { length: 25 },
-      (_, hour) => {
+      { length: 97 },
+      (_, interval) => {
         const date = new Date(
           `${selectedDate}T00:00:00`
         );
 
         date.setHours(
-          hour,
           0,
+          interval * 15,
           0,
           0
         );
@@ -282,16 +282,12 @@ const LoadForecastChart = () => {
   // =========================================================
   // LOAD FORECAST
   // =========================================================
-  //
-  // API gives minute-wise forecast.
-  // Convert minute data to hourly average.
-  // =========================================================
 
-  const forecastHourlyData =
+  const forecastQuarterHourlyData =
     useMemo(() => {
-      const hourlyValues: number[][] =
+      const intervalValues: number[][] =
         Array.from(
-          { length: 24 },
+          { length: 96 },
           () => []
         );
 
@@ -326,15 +322,16 @@ const LoadForecastChart = () => {
           return;
         }
 
-        const hour =
-          date.getHours();
+        const interval =
+          date.getHours() * 4 +
+          Math.floor(date.getMinutes() / 15);
 
         if (
-          hour >= 0 &&
-          hour < 24
+          interval >= 0 &&
+          interval < 96
         ) {
-          hourlyValues[
-            hour
+          intervalValues[
+            interval
           ].push(
             Number(
               item.forecast_load_kw
@@ -346,10 +343,10 @@ const LoadForecastChart = () => {
       const result: (
         | number
         | null
-      )[] = Array(25).fill(null);
+      )[] = Array(97).fill(null);
 
-      hourlyValues.forEach(
-        (values, hour) => {
+      intervalValues.forEach(
+        (values, interval) => {
           if (!values.length) {
             return;
           }
@@ -361,19 +358,15 @@ const LoadForecastChart = () => {
               0
             ) / values.length;
 
-          result[hour] =
+          result[interval] =
             Number(
               average.toFixed(2)
             );
         }
       );
 
-      // Close spline at 24:00
-      if (
-        result[23] !== null
-      ) {
-        result[24] =
-          result[23];
+      if (result[95] !== null) {
+        result[96] = result[95];
       }
 
       return result;
@@ -382,19 +375,13 @@ const LoadForecastChart = () => {
   // =========================================================
   // BESS SCHEDULE
   // =========================================================
-  //
-  // Charge    = positive
-  // Discharge = negative
-  // Idle      = ignored
-  // Grid      = ignored
-  // =========================================================
 
   const bessScheduleData =
     useMemo(() => {
       const values: (
         | number
         | null
-      )[] = Array(25).fill(
+      )[] = Array(97).fill(
         null
       );
 
@@ -435,12 +422,13 @@ const LoadForecastChart = () => {
           return;
         }
 
-        const startHour =
-          startDate.getHours();
+        const interval =
+          startDate.getHours() * 4 +
+          Math.floor(startDate.getMinutes() / 15);
 
         if (
-          startHour < 0 ||
-          startHour > 23
+          interval < 0 ||
+          interval > 95
         ) {
           return;
         }
@@ -470,18 +458,17 @@ const LoadForecastChart = () => {
             -Math.abs(power);
         }
 
-        // Multiple schedules in
-        // same hour
+        // Combine schedules that start in the same 15-minute interval.
         if (
-          values[startHour] ===
+          values[interval] ===
           null
         ) {
-          values[startHour] =
+          values[interval] =
             power;
         } else {
-          values[startHour] =
+          values[interval] =
             Number(
-              values[startHour]
+              values[interval]
             ) + power;
         }
       });
@@ -507,7 +494,7 @@ const LoadForecastChart = () => {
         },
 
         data:
-          forecastHourlyData,
+          forecastQuarterHourlyData,
       },
 
       {
@@ -522,7 +509,7 @@ const LoadForecastChart = () => {
       },
     ];
   }, [
-    forecastHourlyData,
+    forecastQuarterHourlyData,
     bessScheduleData,
   ]);
 

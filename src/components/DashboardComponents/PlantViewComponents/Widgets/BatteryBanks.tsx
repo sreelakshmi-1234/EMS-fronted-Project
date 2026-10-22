@@ -283,7 +283,7 @@ const BatteryBanks: React.FC = () => {
         Battery Banks
       </Text>
     <Box
-      height={"100%"}
+      height={"880px"}
       width={"100%"}
       overflowY={"auto"}
     >

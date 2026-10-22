@@ -145,7 +145,7 @@ const PowerCurve = () => {
     dataSource: {
       devices: {
         patterns: [],
-        ids: ["plant_1_pcs_1_bank_bank_1"],
+        ids: ["plant_1_pcs_2_bank_bank_1"],
       },
       keys: [
         {
@@ -246,7 +246,7 @@ const PowerCurve = () => {
       }
       
       width={["578px"]}
-      height="344px"
+      height="304px"
       fullScreen
       timeWindow
       onTimeWindowChange={handleTimeWindowChange}
@@ -255,7 +255,7 @@ const PowerCurve = () => {
     >
       <SplineGraph
         apiData={seriesForChart}
-        height={280}
+        height={250}
         onExportReady={setExportFunctions}
         props={{
           chart: {

@@ -118,7 +118,7 @@ const SolarGraph: React.FC = () => {
     <GraphLayout
       title={<WidgetTitle color={textColor}>Solar</WidgetTitle>}
       width={["578px"]}
-      height="344px"
+      height="304px"
       fullScreen
       timeWindow
       onTimeWindowChange={(config) => handleTimeWindowCUFChange(config)}

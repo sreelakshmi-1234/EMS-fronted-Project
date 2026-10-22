@@ -117,7 +117,7 @@ const GridStackBarGraph: React.FC = () => {
     <GraphLayout
       title={<WidgetTitle color={textColor}>Grid</WidgetTitle>}
       width={["578px"]}
-      height="344px"
+      height="304px"
       fullScreen
       timeWindow
       onTimeWindowChange={handleTimeWindowChange}

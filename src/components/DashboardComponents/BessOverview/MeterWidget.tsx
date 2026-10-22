@@ -79,6 +79,11 @@ const MeterWidget = () => {
     );
   }, [currentDate]);
 
+  const isCurrentDay =
+    timeWindow.timeRange.type === "relative" &&
+    timeWindow.timeRange.relativeType === "currentDaySoFar";
+  const currentDayLabelInterval = 4 * 60 * 60 * 1000;
+
   const applyAbsoluteDay = (date: Date) => {
 
     const start = new Date(date);
@@ -249,6 +254,11 @@ const MeterWidget = () => {
     if (!data || typeof data !== "object") return [];
 
     const s: any[] = [];
+    const seriesColors: Record<string, string> = {
+      total_active_power: "#1890FF",
+      total_reactive_power: "#20B26B",
+      total_apparent_power: "#F5A623",
+    };
 
     Object.values(data).forEach((deviceObj: any) => {
 
@@ -261,6 +271,7 @@ const MeterWidget = () => {
           s.push({
             type: "spline",
             name: metric,
+            color: seriesColors[metric],
 
             data: pts
               .filter(
@@ -395,7 +406,7 @@ const MeterWidget = () => {
         </Flex>
       }
       width="590px"
-      height="280px"
+      height="300px"
       fullScreen
       timeWindow={!isFullscreen}
       onTimeWindowChange={handleTimeWindowChange}
@@ -404,37 +415,45 @@ const MeterWidget = () => {
     >
       <Box
         w="100%"
-        h={isFullscreen ? "calc(100vh - 60px)" : "248px"}
+        h={isFullscreen ? "calc(100vh - 60px)" : "218px"}
+        minH={0}
         bg={dashboardBg}
         px="7px"
-        pb="5px"
+        pb="0px"
         display="flex"
         flexDirection="column"
-        gap="4px"
+        gap="0px"
         overflow="hidden"
+        boxSizing="border-box"
       >
         <Box
           w="100%"
-          h="238px"
-          minH="0"
+          h={isFullscreen ? "100%" : "218px"}
+          minH={0}
           display="flex"
-          gap="6px"
+          flex={isFullscreen ? 1 : "initial"}
+          flexDirection={isFullscreen ? "column" : "row"}
+          gap={isFullscreen ? "12px" : "6px"}
           minW="0"
+          overflow="hidden"
+          flexShrink={isFullscreen ? 1 : 0}
         >
           <Box
-            flex="1"
+            flex={isFullscreen ? "0 0 auto" : "1"}
             minW="0"
-            h="238px"
-            minH="0"
+            h={isFullscreen ? "calc(100vh - 180px)" : "218px"}
+            minH={0}
             bg={panelBg}
             border="1px solid"
             borderColor={borderColor}
             borderRadius="8px"
-            p="4px"
+            p="2px"
+            boxSizing="border-box"
+            overflow="hidden"
           >
             <SplineGraph
               apiData={seriesForChart}
-              height={isFullscreen ? window.innerHeight - 120 : 223}
+              height={isFullscreen ? window.innerHeight - 260 : 214}
               onExportReady={setExportFunctions}
               props={{
                 yAxis: {
@@ -450,10 +469,14 @@ const MeterWidget = () => {
 
                 xAxis: {
                   type: "datetime",
+                  minInterval: currentDayLabelInterval,
+                  maxInterval: currentDayLabelInterval,
                   labels: {
+                    step: isCurrentDay ? 4 : 1,
+                    rotation: 0,
                     style: {
                       color: subTextColor,
-                      fontSize: "8px",
+                      fontSize: isCurrentDay ? "7px" : "8px",
                     },
                   },
                   lineColor: axisLineColor,
@@ -479,34 +502,36 @@ const MeterWidget = () => {
                 },
 
                 legend: {
+                  enabled: true,
                   align: "center",
                   verticalAlign: "top",
                   y: 0,
                   itemStyle: {
                     color: textColor,
-                    fontSize: "8px",
+                    fontSize: "12px",
                     fontWeight: "500",
                   },
-                  itemDistance: 8,
+                  itemDistance: 16,
                 },
               }}
             />
           </Box>
 
-          {!isFullscreen && (
             <Box
-              w="180px"
-              minW="180px"
-              h="238px"
+              w={isFullscreen ? "100%" : "180px"}
+              minW={isFullscreen ? "0" : "180px"}
+              h={isFullscreen ? "90px" : "218px"}
               minH="0"
               display="flex"
-              flexDirection="column"
-              gap="3px"
-              overflow="hidden"
+              flexDirection={isFullscreen ? "row" : "column"}
+              gap={isFullscreen ? "8px" : "2px"}
+              overflow="visible"
+              boxSizing="border-box"
             >
               <Box
                 flex="1"
                 minH="0"
+                minW="0"
                 px="8px"
                 py="3px"
                 borderRadius="8px"
@@ -524,27 +549,27 @@ const MeterWidget = () => {
                 <HStack justify="space-between" spacing="3px" align="flex-start">
                   <HStack spacing="5px" minW="0" flex="1">
                     <Icon as={FiZap} boxSize="21px" flexShrink={0} color={blueGlow} />
-                    <Text fontSize="8px" fontWeight="600" whiteSpace="nowrap">
+                    <Text fontSize={isFullscreen ? "12px" : "8px"} fontWeight="600" whiteSpace="nowrap">
                       Instantaneous Power
                     </Text>
                   </HStack>
 
-                  <Text fontSize="12px" fontWeight="700" color={blueGlow} whiteSpace="nowrap">
+                  <Text fontSize={isFullscreen ? "16px" : "12px"} fontWeight="700" color={blueGlow} whiteSpace="nowrap">
                     2512.5
-                    <Text as="span" fontSize="6px" ml="2px">
+                    <Text as="span" fontSize={isFullscreen ? "9px" : "6px"} ml="2px">
                       kVA
                     </Text>
                   </Text>
                 </HStack>
 
                 <HStack mt="1px" justify="space-between" spacing="3px">
-                  <Text fontSize="7px" color={subTextColor}>
+                  <Text fontSize={isFullscreen ? "12px" : "10px"} color={subTextColor}>
                     kVA: <b>2512.5</b>
                   </Text>
-                  <Text fontSize="7px" color={subTextColor}>
+                  <Text fontSize={isFullscreen ? "12px" : "10px"} color={subTextColor}>
                     kVAR: <b>0.00</b>
                   </Text>
-                  <Text fontSize="7px" color={subTextColor}>
+                  <Text fontSize={isFullscreen ? "12px" : "10px"} color={subTextColor}>
                     kW: <b>2512.5</b>
                   </Text>
                 </HStack>
@@ -553,6 +578,7 @@ const MeterWidget = () => {
               <Box
                 flex="1"
                 minH="0"
+                minW="0"
                 px="8px"
                 py="3px"
                 borderRadius="8px"
@@ -568,7 +594,7 @@ const MeterWidget = () => {
                   boxShadow: "0 5px 14px rgba(32,178,107,0.18)",
                 }}
               >
-                <HStack justify="space-between" align="flex-start" spacing="3px">
+                <HStack justify="space-between" align="center" spacing="3px">
                   <HStack spacing="5px">
                     <Box
                       w="27px"
@@ -582,25 +608,24 @@ const MeterWidget = () => {
                       <Icon as={FiActivity} boxSize="17px" color={greenGlow} />
                     </Box>
                     <Box>
-                      <Text fontSize="8px" fontWeight="600" lineHeight="10px">
+                      <Text fontSize={isFullscreen ? "12px" : "8px"} fontWeight="600" lineHeight="10px">
                         Daily Energy
-                      </Text>
-                      <Text fontSize="15px" fontWeight="700" color={greenGlow} lineHeight="17px">
-                        7032
-                        <Text as="span" fontSize="7px" ml="3px" color={subTextColor}>
-                          kWh
-                        </Text>
                       </Text>
                     </Box>
                   </HStack>
-
+                  <Text fontSize={isFullscreen ? "16px" : "13px"} fontWeight="700" color={greenGlow} lineHeight="15px" whiteSpace="nowrap">
+                    7032
+                    <Text as="span" fontSize={isFullscreen ? "9px" : "7px"} ml="3px" color={subTextColor}>
+                      kWh
+                    </Text>
+                  </Text>
                 </HStack>
 
-                <HStack mt="1px" justify="space-between" spacing="5px" px="2px">
-                  <Text fontSize="6px" color={subTextColor} whiteSpace="nowrap">
+                <HStack mt="-4px" justify="space-between" spacing="5px" px="2px">
+                  <Text fontSize={isFullscreen ? "11px" : "9px"} color={subTextColor} whiteSpace="nowrap">
                     Import <b>7032 kWh</b>
                   </Text>
-                  <Text fontSize="6px" color={subTextColor} whiteSpace="nowrap">
+                  <Text fontSize={isFullscreen ? "11px" : "9px"} color={subTextColor} whiteSpace="nowrap">
                     Export <b>0.00 kWh</b>
                   </Text>
                 </HStack>
@@ -609,6 +634,7 @@ const MeterWidget = () => {
               <Box
                 flex="1"
                 minH="0"
+                minW="0"
                 px="8px"
                 py="3px"
                 borderRadius="8px"
@@ -637,10 +663,10 @@ const MeterWidget = () => {
                       <Icon as={FiActivity} boxSize="18px" color={blueGlow} />
                     </Box>
                     <Box>
-                      <Text fontSize="8px" fontWeight="600" lineHeight="10px">Frequency</Text>
-                      <Text fontSize="15px" fontWeight="700" lineHeight="16px" color={blueGlow}>
+                      <Text fontSize={isFullscreen ? "12px" : "8px"} fontWeight="600" lineHeight="10px">Frequency</Text>
+                      <Text fontSize={isFullscreen ? "20px" : "15px"} fontWeight="700" lineHeight="16px" color={blueGlow}>
                         49.81
-                        <Text as="span" fontSize="7px" ml="3px" color={subTextColor}>Hz</Text>
+                        <Text as="span" fontSize={isFullscreen ? "9px" : "7px"} ml="3px" color={subTextColor}>Hz</Text>
                       </Text>
                     </Box>
                   </HStack>
@@ -651,6 +677,7 @@ const MeterWidget = () => {
               <Box
                 flex="1"
                 minH="0"
+                minW="0"
                 px="8px"
                 py="3px"
                 borderRadius="8px"
@@ -668,24 +695,24 @@ const MeterWidget = () => {
                 <HStack justify="space-between" spacing="3px">
                   <HStack spacing="5px">
                     <Text fontSize="18px" lineHeight="18px">⚡</Text>
-                    <Text fontSize="8px" fontWeight="600" whiteSpace="nowrap">Voltage (L-L)</Text>
+                    <Text fontSize={isFullscreen ? "12px" : "8px"} fontWeight="600" whiteSpace="nowrap">Voltage (L-L)</Text>
                   </HStack>
 
-                  <Text fontSize="13px" fontWeight="700" whiteSpace="nowrap">231.13 V</Text>
+                  <Text fontSize={isFullscreen ? "16px" : "13px"} fontWeight="700" whiteSpace="nowrap">231.13 V</Text>
                 </HStack>
 
                 <HStack mt="2px" spacing="0" w="100%">
                   <Box w="33.33%" textAlign="center" borderRight="1px solid rgba(255,255,255,0.20)">
-                    <Text fontSize="7px" fontWeight="600">231.13 V</Text>
-                    <Text fontSize="6px" color={subTextColor}>L1</Text>
+                    <Text fontSize={isFullscreen ? "13px" : "10px"} fontWeight="600">231.13 V</Text>
+                    <Text fontSize={isFullscreen ? "8px" : "6px"} color={subTextColor}>L1</Text>
                   </Box>
                   <Box w="33.33%" textAlign="center" borderRight="1px solid rgba(255,255,255,0.20)">
-                    <Text fontSize="7px" fontWeight="600">230.85 V</Text>
-                    <Text fontSize="6px" color={subTextColor}>L2</Text>
+                    <Text fontSize={isFullscreen ? "13px" : "10px"} fontWeight="600">230.85 V</Text>
+                    <Text fontSize={isFullscreen ? "8px" : "6px"} color={subTextColor}>L2</Text>
                   </Box>
                   <Box w="33.33%" textAlign="center">
-                    <Text fontSize="7px" fontWeight="600">231.42 V</Text>
-                    <Text fontSize="6px" color={subTextColor}>L3</Text>
+                    <Text fontSize={isFullscreen ? "13px" : "10px"} fontWeight="600">231.42 V</Text>
+                    <Text fontSize={isFullscreen ? "8px" : "6px"} color={subTextColor}>L3</Text>
                   </Box>
                 </HStack>
               </Box>
@@ -693,6 +720,7 @@ const MeterWidget = () => {
               <Box
                 flex="1"
                 minH="0"
+                minW="0"
                 px="8px"
                 py="3px"
                 borderRadius="8px"
@@ -710,29 +738,28 @@ const MeterWidget = () => {
                 <HStack justify="space-between" spacing="3px">
                   <HStack spacing="5px">
                     <Text fontSize="18px" color="#FFB72B" lineHeight="18px">〽</Text>
-                    <Text fontSize="8px" fontWeight="600">Current</Text>
+                    <Text fontSize={isFullscreen ? "12px" : "8px"} fontWeight="600">Current</Text>
                   </HStack>
 
-                  <Text fontSize="13px" fontWeight="700" color="#FFD166" whiteSpace="nowrap">978.05 A</Text>
+                  <Text fontSize={isFullscreen ? "16px" : "13px"} fontWeight="700" color="#FFD166" whiteSpace="nowrap">978.05 A</Text>
                 </HStack>
 
                 <HStack mt="2px" spacing="0" w="100%">
                   <Box w="33.33%" textAlign="center" borderRight="1px solid rgba(255,255,255,0.20)">
-                    <Text fontSize="7px" fontWeight="600">978.05 A</Text>
-                    <Text fontSize="6px" color={subTextColor}>L1</Text>
+                    <Text fontSize={isFullscreen ? "13px" : "10px"} fontWeight="600">978.05 A</Text>
+                    <Text fontSize={isFullscreen ? "8px" : "6px"} color={subTextColor}>L1</Text>
                   </Box>
                   <Box w="33.33%" textAlign="center" borderRight="1px solid rgba(255,255,255,0.20)">
-                    <Text fontSize="7px" fontWeight="600">977.82 A</Text>
-                    <Text fontSize="6px" color={subTextColor}>L2</Text>
+                    <Text fontSize={isFullscreen ? "13px" : "10px"} fontWeight="600">977.82 A</Text>
+                    <Text fontSize={isFullscreen ? "8px" : "6px"} color={subTextColor}>L2</Text>
                   </Box>
                   <Box w="33.33%" textAlign="center">
-                    <Text fontSize="7px" fontWeight="600">978.31 A</Text>
-                    <Text fontSize="6px" color={subTextColor}>L3</Text>
+                    <Text fontSize={isFullscreen ? "13px" : "10px"} fontWeight="600">978.31 A</Text>
+                    <Text fontSize={isFullscreen ? "8px" : "6px"} color={subTextColor}>L3</Text>
                   </Box>
                 </HStack>
               </Box>
             </Box>
-          )}
         </Box>
 
       </Box>

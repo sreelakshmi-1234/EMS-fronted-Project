@@ -117,7 +117,7 @@ const MeterCard = () => {
             fontWeight="600"
             lineHeight="1"
           >
-            Meter
+            Active Alarm
           </Text>
         </HStack>
 

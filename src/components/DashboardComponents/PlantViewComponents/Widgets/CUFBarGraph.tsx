@@ -176,7 +176,7 @@ const CUFBarGraph: React.FC = () => {
         <WidgetTitle color={textColor}>Charge / Discharge with SOC</WidgetTitle>
       }
       width={["578px"]}
-      height="344px"
+      height="304px"
       fullScreen
       timeWindow
       onTimeWindowChange={handleTimeWindowChange}

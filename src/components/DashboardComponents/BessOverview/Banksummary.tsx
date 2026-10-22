@@ -1,4 +1,4 @@
-import { useMemo, useEffect } from "react";
+import { useMemo } from "react";
 import {
   Box,
   HStack,
@@ -9,7 +9,6 @@ import {
 } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useDevices } from "../../../hooks/useDevices";
-import useTimeseriesData from "../../../hooks/useTimeseriesData";
 import WidgetTitle from "../../Common/WidgetTitle";
 
 interface BankData {
@@ -23,14 +22,25 @@ interface BankData {
   max_temp: number;
   dod?: number;
   soh?: number;
+  energy: {
+    availableEnergy: string;
+    status: string;
+    storedEnergy: string;
+    storedEnergyPercent: number;
+    charge: string;
+    discharge: string;
+    deratedPower: string;
+    energyDischarge: string;
+    energyCharge: string;
+  };
 }
 
 const formatValue = (value: number | undefined) =>
   Number(value ?? 0).toFixed(2);
 
-/* =========================
+/* ========
    CONNECTED / DISABLED CARD
-========================= */
+======== */
 
 const MetricCard = ({
   title,
@@ -91,30 +101,15 @@ const MetricCard = ({
   );
 };
 
-/* =========================
+/* ========
    ENERGY STATUS
-========================= */
+======== */
 
-const EnergyStatus = () => {
+const EnergyStatus = ({ energy }: { energy: BankData["energy"] }) => {
   const textColor = useColorModeValue("#0F172A", "#FFFFFF");
   const subColor = useColorModeValue("#64748B", "#A8B3C2");
   const cardBg = useColorModeValue("#F8FAFC", "rgba(255,255,255,0.04)");
   const border = useColorModeValue("#E2E8F0", "rgba(255,255,255,0.10)");
-
-  const energyKeys = {
-    availableEnergy: "",
-    status: "",
-    storedEnergy: "",
-    storedEnergyPercent: "",
-    charge: "",
-    discharge: "",
-    deratedPower: "",
-    energyDischarge: "",
-    energyCharge: "",
-  };
-
-  const getEnergyValue = (key: keyof typeof energyKeys) =>
-    energyKeys[key] ? "--" : "--";
 
   const miniCard = (
     bg: string,
@@ -144,10 +139,10 @@ const EnergyStatus = () => {
         {title}
       </Text>
       <Text
-        fontSize="11px"
+        fontSize="9px"
         fontWeight="800"
         color={valueColor}
-        lineHeight="12px"
+        lineHeight="10px"
         whiteSpace="nowrap"
       >
         {value}
@@ -199,7 +194,7 @@ const EnergyStatus = () => {
             color="#159447"
             whiteSpace="nowrap"
           >
-            {getEnergyValue("availableEnergy")}
+            {energy.availableEnergy}
           </Text>
           <Box w="1px" h="10px" bg={border} />
           <Text fontSize="7px" color={subColor} whiteSpace="nowrap">
@@ -211,7 +206,7 @@ const EnergyStatus = () => {
             color="#159447"
             whiteSpace="nowrap"
           >
-            {getEnergyValue("status")}
+            {energy.status}
           </Text>
         </HStack>
       </HStack>
@@ -252,7 +247,7 @@ const EnergyStatus = () => {
               color={textColor}
               lineHeight="18px"
             >
-              {getEnergyValue("storedEnergy")}
+              {energy.storedEnergy}
             </Text>
             <Text fontSize="8px" color={subColor} lineHeight="10px">
               MWh
@@ -266,10 +261,15 @@ const EnergyStatus = () => {
               bg="#D8E8F5"
               overflow="hidden"
             >
-              <Box w="72%" h="100%" borderRadius="full" bg="#2196F3" />
+              <Box
+                w={`${energy.storedEnergyPercent}%`}
+                h="100%"
+                borderRadius="full"
+                bg="#2196F3"
+              />
             </Box>
             <Text fontSize="8px" fontWeight="800" color="#2196F3">
-              {getEnergyValue("storedEnergyPercent")}
+              {energy.storedEnergyPercent}%
             </Text>
           </HStack>
         </Box>
@@ -279,19 +279,19 @@ const EnergyStatus = () => {
             {miniCard(
               "linear-gradient(135deg,#ECFFF8,#E4FAF2)",
               "Charge",
-              getEnergyValue("charge"),
+              energy.charge,
               "#0B7F5B"
             )}
             {miniCard(
               "linear-gradient(135deg,#FFF7F0,#FFF1E7)",
               "Discharge",
-              getEnergyValue("discharge"),
+              energy.discharge,
               "#111827"
             )}
             {miniCard(
               "linear-gradient(135deg,#EEF7FF,#E8F2FF)",
               "Derated Power",
-              getEnergyValue("deratedPower"),
+              energy.deratedPower,
               "#DC2626"
             )}
           </HStack>
@@ -314,7 +314,7 @@ const EnergyStatus = () => {
                 Energy discharge
               </Text>
               <Text fontSize="12px" fontWeight="800" color={textColor} lineHeight="14px" whiteSpace="nowrap">
-                {getEnergyValue("energyDischarge")}
+                {energy.energyDischarge}
               </Text>
             </Box>
             <Box
@@ -334,7 +334,7 @@ const EnergyStatus = () => {
                 Energy charge
               </Text>
               <Text fontSize="12px" fontWeight="800" color={textColor} lineHeight="14px" whiteSpace="nowrap">
-                {getEnergyValue("energyCharge")}
+                {energy.energyCharge}
               </Text>
             </Box>
           </HStack>
@@ -344,44 +344,15 @@ const EnergyStatus = () => {
   );
 };
 
-/* =========================
-   BANK SUMMARY
-========================= */
+/* 
+   BANK SUMMARY*/
 
 const BankSummary = () => {
   const border = useColorModeValue("#E5E7EB", "#4A5568");
 
   const { devices } = useDevices();
-  const { data: socData, fetchData: fetchSocData } = useTimeseriesData();
 
   const navigate = useNavigate();
-
-  useEffect(() => {
-    fetchSocData({
-      devices: {
-        ids: [],
-        patterns: ["_bank_bank_"],
-      },
-      keys: [
-        {
-          key: "soc",
-          alias: "SoC",
-          keyType: "common",
-        },
-      ],
-      aggregation: {
-        func: "none",
-        interval: 1,
-        intervalType: "minute",
-      },
-      timeRange: {
-        type: "last",
-        interval: 1,
-        intervalType: "day",
-      },
-      orderBy: "DESC",
-    } as any);
-  }, []);
 
   const bankOptions = useMemo(() => {
     const filteredDevices = (devices || []).filter((device: any) => {
@@ -393,39 +364,37 @@ const BankSummary = () => {
       );
     });
 
-    return filteredDevices.map((device: any) => {
+    return filteredDevices.map((device: any, index: number) => {
       const deviceId = String(
         device?.device_id || device?.name || ""
       );
 
-      const root = socData?.data ?? socData;
-      const deviceData =
-        root && typeof root === "object" && !Array.isArray(root)
-          ? (root as Record<string, Record<string, Array<{ ts: number; value: number }>>>)?.[deviceId]
-          : undefined;
-
-      const socPoints =
-        deviceData && typeof deviceData === "object" && "SoC" in deviceData
-          ? (deviceData as Record<string, Array<{ ts: number; value: number }>>)["SoC"]
-          : undefined;
-
-      const soc = Array.isArray(socPoints) && socPoints.length
-        ? socPoints.reduce((a: any, b: any) =>
-            Number(b.ts) > Number(a.ts) ? b : a
-          )
-        : null;
+      const bankNumber = index + 1;
+      const soc = 42 + ((bankNumber * 11) % 48);
+      const storedEnergyPercent = 38 + ((bankNumber * 13) % 58);
 
       return {
         ...device,
         device_id: deviceId,
-        soc: Number(soc?.value) || 0,
-        dod: device?.dod ?? 0,
-        soh: device?.soh ?? 0,
-        active_device: device?.active_device ?? 0,
-        non_active_device: device?.non_active_device ?? 0,
+        soc,
+        dod: 100 - soc,
+        soh: 82 + ((bankNumber * 7) % 18),
+        active_device: 0,
+        non_active_device: 0,
+        energy: {
+          availableEnergy: (1.2 + ((bankNumber * 0.47) % 4.8)).toFixed(2),
+          status: bankNumber % 2 === 0 ? "Charging" : "Discharging",
+          storedEnergy: (2.4 + ((bankNumber * 1.37) % 15)).toFixed(2),
+          storedEnergyPercent,
+          charge: `${(0.4 + ((bankNumber * 0.31) % 3.5)).toFixed(2)} MW`,
+          discharge: `${(0.3 + ((bankNumber * 0.27) % 3.2)).toFixed(2)} MW`,
+          deratedPower: `${(0.1 + ((bankNumber * 0.09) % 0.8)).toFixed(2)} MW`,
+          energyDischarge: `${(1.5 + ((bankNumber * 0.83) % 12)).toFixed(2)} MWh`,
+          energyCharge: `${(1.1 + ((bankNumber * 0.61) % 10)).toFixed(2)} MWh`,
+        },
       };
     });
-  }, [devices, socData]);
+  }, [devices]);
 
   return (
     <Box
@@ -487,15 +456,6 @@ const BankSummary = () => {
                   "0 8px 22px rgba(15, 23, 42, 0.08)",
                   "0 12px 30px rgba(0, 0, 0, 0.25)"
                 )}
-                transition="transform 0.2s ease, box-shadow 0.2s ease"
-                _hover={{
-                  transform:
-                    "translateY(-3px)",
-                  boxShadow: useColorModeValue(
-                    "0 14px 30px rgba(15, 23, 42, 0.12)",
-                    "0 18px 40px rgba(0, 0, 0, 0.30)"
-                  ),
-                }}
               >
                 <HStack
                   align="center"
@@ -504,7 +464,7 @@ const BankSummary = () => {
                   maxW="100%"
                   minW="0"
                 >
-                  {/* ================= LEFT ================= */}
+                  {/*  LEFT  */}
                   <Box
                     w="145px"
                     minW="145px"
@@ -656,7 +616,7 @@ const BankSummary = () => {
                     </VStack>
                   </Box>
 
-                  {/* ================= CONNECTED ================= */}
+                  {/*  CONNECTED  */}
                   <HStack
                     spacing={2}
                     align="stretch"
@@ -681,8 +641,8 @@ const BankSummary = () => {
                     />
                   </HStack>
 
-                  {/* ================= ENERGY STATUS ================= */}
-                  <EnergyStatus />
+                  {/*  ENERGY STATUS  */}
+                  <EnergyStatus energy={bank.energy} />
                 </HStack>
               </Box>
             )

@@ -6,6 +6,7 @@ import {
   HStack,
   VStack,
   Badge,
+  Button,
   IconButton,
   Progress,
   Icon,
@@ -30,6 +31,8 @@ import {
   FiRefreshCw,
   FiGrid,
   FiAlertCircle,
+  FiPlay,
+  FiSquare,
 } from "react-icons/fi";
 
 import { ExpandIcon, SqeezIcon } from "../../../assets/Icons";
@@ -68,6 +71,41 @@ const EMS_SCHEDULE_API = getEmsScheduleUrl();
 
 console.log("EMS Schedule API:", EMS_SCHEDULE_API);
 
+const getControlApiUrl = (path: string): string => {
+  const baseUrl = import.meta.env.VITE_API_BASE;
+
+  if (!baseUrl) {
+    console.error("VITE_API_BASE is not defined");
+    return path;
+  }
+
+  try {
+    const port = import.meta.env.VITE_API_PORT;
+
+    const url = new URL(baseUrl);
+
+    if (port) {
+      url.port = String(port);
+    }
+
+    url.pathname = path;
+    url.search = "";
+
+    return url.toString();
+  } catch (error) {
+    console.error("Failed to construct EMS control API URL:", error);
+    return path;
+  }
+};
+
+const EXECUTE_API = getControlApiUrl(
+  "/api/twin_schedule_exec"
+);
+
+const STOP_API = getControlApiUrl(
+  "/api/twin_schedule_stop"
+);
+
 /* =========================================================
    TYPES
 ========================================================= */
@@ -76,6 +114,7 @@ interface ScheduleItem {
   time: string;
   timeStamp: string;
   eventId: string;
+  eventNumber: number | null;
   load: number;
   pv: number;
   tariff: number;
@@ -109,6 +148,7 @@ interface ApiSchedule {
   // API may return true / false / 1 / 0 / "true" / "false"
   is_pass?: boolean | number | string | null;
   event_id?: string | null;
+  event_number?: number | string | null;
 }
 
 interface EMScheduleResponse {
@@ -117,6 +157,11 @@ interface EMScheduleResponse {
   schedule?: ApiSchedule[];
   message?: string;
   error?: string;
+}
+
+interface ControlApiResponse {
+  success?: boolean;
+  message?: string;
 }
 
 /* =========================================================
@@ -244,6 +289,14 @@ const mapApiSchedule = (
     "--"
   ),
 
+  eventNumber:
+    item.event_number !== null &&
+    item.event_number !== undefined &&
+    item.event_number !== "" &&
+    Number.isInteger(Number(item.event_number))
+      ? Number(item.event_number)
+      : null,
+
   load: toNumber(item.load_kw),
 
   pv: toNumber(item.pv_kw),
@@ -298,6 +351,12 @@ const NextDaySchedule: React.FC = () => {
 
   const [selectedIndex, setSelectedIndex] =
     useState(0);
+
+  const [executingScheduleKey, setExecutingScheduleKey] =
+    useState<string | null>(null);
+
+  const [executionLoading, setExecutionLoading] =
+    useState(false);
 
   const [isFullscreen, setIsFullscreen] =
     useState(false);
@@ -529,6 +588,144 @@ const NextDaySchedule: React.FC = () => {
           )
         ]
       : null;
+
+  const selectedScheduleKey = selected
+    ? `${selected.timeStamp}-${selected.eventId}`
+    : null;
+
+  const isSelectedExecuting =
+    selectedScheduleKey !== null &&
+    executingScheduleKey === selectedScheduleKey;
+
+  const handleExecute = async () => {
+    if (!selected || !selectedScheduleKey) return;
+
+    if (selected.eventNumber === null) {
+      window.alert(
+        "Event number is missing for this schedule."
+      );
+      return;
+    }
+
+    setExecutionLoading(true);
+
+    try {
+      const response = await fetch(EXECUTE_API, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          event_number: selected.eventNumber,
+        }),
+      });
+
+      const result: ControlApiResponse = await response.json();
+
+      if (!response.ok || result.success !== true) {
+        throw new Error(
+          result.message || "Schedule execution failed."
+        );
+      }
+
+      setExecutingScheduleKey(selectedScheduleKey);
+
+      window.alert(
+        result.message || "Schedule execution started."
+      );
+    } catch (error) {
+      console.error("Execute API error:", error);
+
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "Unable to execute schedule."
+      );
+    } finally {
+      setExecutionLoading(false);
+    }
+  };
+
+  const handleStopExecution = async () => {
+    if (!selected || !selectedScheduleKey) return;
+
+    setExecutionLoading(true);
+
+    try {
+      const response = await fetch(STOP_API, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+        },
+      });
+
+      const result: ControlApiResponse = await response.json();
+
+      if (!response.ok || result.success !== true) {
+        throw new Error(
+          result.message || "Stop execution failed."
+        );
+      }
+
+      setExecutingScheduleKey(null);
+
+      window.alert(
+        result.message || "Schedule stop requested."
+      );
+    } catch (error) {
+      console.error("Stop API error:", error);
+
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "Unable to stop execution."
+      );
+    } finally {
+      setExecutionLoading(false);
+    }
+  };
+
+  const handleResetExecution = async () => {
+    setExecutionLoading(true);
+
+    try {
+      const response = await fetch(EXECUTE_API, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          event_number: 0,
+        }),
+      });
+
+      const result: ControlApiResponse = await response.json();
+
+      if (!response.ok || result.success !== true) {
+        throw new Error(
+          result.message || "Schedule reset failed."
+        );
+      }
+
+      setExecutingScheduleKey(null);
+
+      window.alert(
+        result.message || "Schedule reset request sent."
+      );
+    } catch (error) {
+      console.error("Reset API error:", error);
+
+      window.alert(
+        error instanceof Error
+          ? error.message
+          : "Unable to reset schedule."
+      );
+    } finally {
+      setExecutionLoading(false);
+    }
+  };
 
   /* =========================================================
      SUMMARY
@@ -1238,6 +1435,75 @@ const NextDaySchedule: React.FC = () => {
           overflowY="auto"
           height="100%"
         >
+          {/* SCHEDULE EXECUTION CONTROLS */}
+          <Box
+            mb="12px"
+            p="10px"
+            border="1px solid #E2EAF4"
+            borderRadius="10px"
+            bg="#F8FAFD"
+          >
+            <Flex align="center" justify="space-between" mb="9px">
+              <Text fontSize="11px" fontWeight="700" color="#243552">
+                Schedule Execution
+              </Text>
+
+              <Badge
+                colorScheme={isSelectedExecuting ? "green" : "gray"}
+                fontSize="9px"
+                px="7px"
+                py="3px"
+              >
+                {isSelectedExecuting ? "EXECUTING" : "NOT STARTED"}
+              </Badge>
+            </Flex>
+
+            <HStack spacing="8px">
+              <Button
+                flex="1"
+                size="sm"
+                leftIcon={<Icon as={FiPlay} />}
+                colorScheme="green"
+                fontSize="11px"
+                isLoading={executionLoading}
+                loadingText="Executing..."
+                isDisabled={executionLoading || isSelectedExecuting}
+                onClick={handleExecute}
+              >
+                Execute
+              </Button>
+
+              <Button
+                flex="1"
+                size="sm"
+                leftIcon={<Icon as={FiSquare} />}
+                colorScheme="red"
+                variant="outline"
+                fontSize="11px"
+                isLoading={executionLoading}
+                loadingText="Stopping..."
+                isDisabled={executionLoading}
+                onClick={handleStopExecution}
+              >
+                Stop
+              </Button>
+              <Button
+                flex="1"
+                size="sm"
+                leftIcon={<Icon as={FiRefreshCw} />}
+                colorScheme="gray"
+                variant="outline"
+                fontSize="11px"
+                isLoading={executionLoading}
+                loadingText="Resetting..."
+                isDisabled={executionLoading}
+                onClick={handleResetExecution}
+              >
+                Reset
+              </Button>
+            </HStack>
+          </Box>
+
           {/* SELECTED TIME */}
 
           <Flex

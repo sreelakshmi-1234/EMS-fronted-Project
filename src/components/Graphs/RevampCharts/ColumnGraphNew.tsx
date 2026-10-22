@@ -1,3 +1,4 @@
+
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import ReactECharts from "echarts-for-react";
 
@@ -12,12 +13,10 @@ import {
 } from "echarts/components";
 
 import { BarChart, LineChart } from "echarts/charts";
-
 import { CanvasRenderer } from "echarts/renderers";
 
-import "../../../App.css";
+
 import type { ExportFunctions } from "../../../types/graphExport/export";
-import { EnlargeHeight } from "../../../Services/EnlargeWidget";
 
 echarts.use([
   GridComponent,
@@ -55,7 +54,7 @@ interface ColumnGraphProps {
 }
 
 const ColumnGraph: React.FC<ColumnGraphProps> = ({
-  apiData,
+  apiData = [],
   height = 280,
   bg,
   category,
@@ -77,10 +76,18 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
   borderRadius = 0,
 }) => {
   const chartRef = useRef<ReactECharts>(null);
-
+  const pointerFixCleanupRef = useRef<(() => void) | null>(null);
   const [isDark, setIsDark] = useState(false);
 
-  // Detect Chakra Theme
+  useEffect(() => {
+    return () => {
+      pointerFixCleanupRef.current?.();
+    };
+  }, []);
+
+  // --------------------------------------------------
+  // Detect Chakra theme
+  // --------------------------------------------------
   useEffect(() => {
     const detectTheme = () => {
       const mode = localStorage.getItem("chakra-ui-color-mode");
@@ -104,57 +111,80 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
     };
   }, []);
 
-  const axisLabelColor = axisLabelColorProp ?? (isDark ? "#E6E6E6" : "#1A202C");
-  const gridColor = gridColorProp ?? (isDark
-    ? "rgba(255,255,255,0.08)"
-    : "rgba(0,0,0,0.10)");
-  const lineColor = lineColorProp ?? (isDark
-    ? "rgba(255,255,255,0.08)"
-    : "rgba(0,0,0,0.15)");
-  const legendColor = legendColorProp ?? (isDark ? "#E6E6E6" : "#1A202C");
-  const tooltipBg = tooltipBgProp ?? (isDark ? "rgba(24,24,27,.96)" : "#fff");
-  const tooltipColor = tooltipColorProp ?? (isDark ? "#fff" : "#1A202C");
+  const axisLabelColor =
+    axisLabelColorProp ?? (isDark ? "#E6E6E6" : "#1A202C");
 
-  const chartHeight = isFullscreen ? "calc(100vh - 70px)" : Number(height);
+  const gridColor =
+    gridColorProp ??
+    (isDark
+      ? "rgba(255,255,255,0.08)"
+      : "rgba(0,0,0,0.10)");
 
+  const lineColor =
+    lineColorProp ??
+    (isDark
+      ? "rgba(255,255,255,0.08)"
+      : "rgba(0,0,0,0.15)");
+
+  const legendColor =
+    legendColorProp ?? (isDark ? "#E6E6E6" : "#1A202C");
+
+  const tooltipBg =
+    tooltipBgProp ?? (isDark ? "rgba(24,24,27,.96)" : "#fff");
+
+  const tooltipColor =
+    tooltipColorProp ?? (isDark ? "#fff" : "#1A202C");
+
+  const chartHeight = isFullscreen
+    ? "calc(100vh - 70px)"
+    : Number(height);
+
+  // --------------------------------------------------
+  // Resize chart on fullscreen change
+  // --------------------------------------------------
   useEffect(() => {
     inFullScreen?.(isFullscreen);
+
     requestAnimationFrame(() => {
       const chart = chartRef.current?.getEchartsInstance();
+
       if (chart && !chart.isDisposed()) {
-        chart.resize({
-          animation: false,
-        });
+        chart.resize({ animation: false });
       }
     });
-  }, [isFullscreen]);
+  }, [isFullscreen, inFullScreen]);
 
-    const option = useMemo(() => {
-    const isCategory = !!category?.length;
-    const hasTimeSeriesData = (apiData || []).some((series: any) => {
-      const data = Array.isArray(series?.data) ? series.data : [];
-      return data.some((point: any) => Array.isArray(point) && typeof point[0] === "number");
-    });
+  // --------------------------------------------------
+  // Chart option
+  // Timestamp axis and tooltip follow SplineGraph
+  // --------------------------------------------------
+  const option = useMemo(() => {
+    const hasTimeSeriesData = (apiData || []).some((series: any) =>
+      Array.isArray(series?.data) &&
+      series.data.some(
+        (point: any) =>
+          Array.isArray(point) &&
+          Number.isFinite(Number(point[0]))
+      )
+    );
 
-    const derivedCategories = isCategory
-      ? category
-      : hasTimeSeriesData && Array.isArray(apiData?.[0]?.data)
-        ? apiData[0].data.map((point: any) => {
-            const ts = Array.isArray(point) ? point[0] : undefined;
-            if (typeof ts !== "number") return "";
-            const date = new Date(ts);
-            return `${String(date.getDate()).padStart(2, "0")}`;
-          })
-        : undefined;
-
+    /*
+     * Keep the original [timestamp, value] data for time-series
+     * points. Do not convert timestamps into category indexes.
+     */
     const normalizedSeries = (apiData || []).map((series: any) => ({
       ...series,
       data: Array.isArray(series?.data)
         ? series.data.map((point: any) => {
-            if (Array.isArray(point)) {
-              return point[1];
+            if (
+              hasTimeSeriesData &&
+              Array.isArray(point) &&
+              Number.isFinite(Number(point[0]))
+            ) {
+              return [Number(point[0]), point[1]];
             }
-            return point;
+
+            return Array.isArray(point) ? point[1] : point;
           })
         : [],
     }));
@@ -163,7 +193,6 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
 
     return {
       backgroundColor: bg || "transparent",
-
       animation: false,
 
       grid: {
@@ -175,6 +204,17 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
         borderWidth: 1,
         borderColor: "#DFDFDF",
       },
+
+      dataZoom: [
+        {
+          type: "inside",
+          xAxisIndex: 0,
+          filterMode: "filter",
+          zoomOnMouseWheel: false,
+          moveOnMouseMove: false,
+          moveOnMouseWheel: false,
+        },
+      ],
 
       legend: {
         type: "scroll",
@@ -195,60 +235,117 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
 
       tooltip: {
         trigger: "axis",
-        confine: false,
+        triggerOn: "mousemove|click",
+        confine: true,
         appendToBody: false,
+        transitionDuration: 0.2,
         backgroundColor: tooltipBg,
         borderWidth: 1,
         padding: [6, 8],
+
         textStyle: {
           color: tooltipColor,
           fontSize: 11,
           lineHeight: 16,
         },
+
         extraCssText: `
-          z-index:999999;
-          font-size:11px;
-          line-height:16px;
-          padding:6px 8px;
-          min-width:140px;
-          max-width:220px;
+          z-index: 999999;
+          font-size: 11px;
+          line-height: 16px;
+          padding: 6px 8px;
+          min-width: 140px;
+          max-width: 220px;
+          pointer-events: none;
+          border-radius: 6px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         `,
+
         axisPointer: {
-          type: "shadow",
+          type: "line",
+          snap: true,
+          triggerTooltip: true,
+          lineStyle: {
+            type: "dashed",
+            width: 1,
+            color: isDark
+              ? "rgba(255,255,255,0.25)"
+              : "rgba(0,0,0,0.25)",
+          },
         },
+
         formatter: (params: any) => {
           if (!Array.isArray(params) || !params.length) {
             return "";
           }
-          const axisValue = params[0]?.axisValue;
-          let html = `<b>${axisValue ?? ""}</b><br/>`;
+
+          // Same timestamp source as SplineGraph.
+          const firstValue = params[0]?.value;
+          const timestamp = Array.isArray(firstValue)
+            ? Number(firstValue[0])
+            : NaN;
+
+          let heading = String(params[0]?.axisValue ?? "");
+
+          if (Number.isFinite(timestamp)) {
+            const date = new Date(timestamp);
+            const pad = (n: number) => String(n).padStart(2, "0");
+
+            heading =
+              `${date.getUTCFullYear()}-` +
+              `${pad(date.getUTCMonth() + 1)}-` +
+              `${pad(date.getUTCDate())} ` +
+              `${pad(date.getUTCHours())}:` +
+              `${pad(date.getUTCMinutes())}`;
+          }
+
+          let html = `<b>${heading}</b><br/>`;
+
           params.forEach((item: any) => {
-            const rawValue = Array.isArray(item.value) ? item.value[1] : item.value;
+            const rawValue = Array.isArray(item.value)
+              ? item.value[1]
+              : item.value;
+
             const value =
-              typeof rawValue === "number" ? rawValue.toFixed(2) : rawValue ?? "";
+              typeof rawValue === "number"
+                ? rawValue.toFixed(2)
+                : rawValue ?? "";
+
             html += `
               <div style="
                 display:flex;
                 justify-content:space-between;
                 gap:12px;
               ">
-                <span>
-                  ${item.marker} ${item.seriesName}
-                </span>
+                <span>${item.marker} ${item.seriesName}</span>
                 <b>${value}</b>
               </div>
             `;
           });
+
           return html;
         },
       },
 
+      // IMPORTANT:
+      // For timestamp data, always use a UTC time axis,
+      // even when a category prop is also supplied.
       xAxis: {
-        type: isCategory || hasTimeSeriesData ? "category" : "time",
+        type: hasTimeSeriesData ? "time" : "category",
+        useUTC: true,
 
-        data: derivedCategories,
+        ...(hasTimeSeriesData ? {} : { data: category }),
 
-        boundaryGap: ["5%", "5%"],
+        boundaryGap: hasTimeSeriesData ? false : true,
+
+        ...(typeof xAxisInterval === "number"
+          ? { interval: xAxisInterval }
+          : {}),
+
+        axisPointer: {
+          show: true,
+          snap: true,
+        },
 
         axisLine: {
           lineStyle: {
@@ -272,23 +369,26 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
         axisLabel: {
           color: axisLabelColor,
           fontSize: 12,
-
           hideOverlap: true,
-        },
 
-        ...(xAxisInterval !== "auto"
-          ? {
-              interval: xAxisInterval,
+          formatter: (value: number | string) => {
+            if (!hasTimeSeriesData) {
+              return String(value).split("-")[0];
             }
-          : {}),
+
+            return echarts.time.format(
+              Number(value),
+              "{HH}:{mm}",
+              true
+            );
+          },
+        },
       },
 
       yAxis: [
         {
           type: "value",
-
           position: "left",
-
           splitNumber: isFullscreen ? 10 : 6,
 
           axisLine: {
@@ -315,9 +415,7 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
 
         {
           type: "value",
-
           position: "right",
-
           splitNumber: isFullscreen ? 10 : 6,
 
           axisLine: {
@@ -343,21 +441,22 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
         ...series,
 
         type: series.type === "spline" ? "line" : "bar",
-
         yAxisIndex: series.yAxis ?? 0,
 
         smooth: series.type === "spline",
         showSymbol: false,
         connectNulls: true,
+
         lineStyle:
           series.type === "spline"
             ? {
                 width: series.lineWidth ?? 2,
               }
             : undefined,
+
         itemStyle: {
           color: series.color,
-          borderRadius: 0,
+          borderRadius,
         },
 
         ...(series.type !== "spline"
@@ -365,15 +464,16 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
               barWidth,
               barGap,
               barCategoryGap,
-              stack: stacked ? (series.stack || "stack") : undefined,
+              stack: stacked
+                ? series.stack || "stack"
+                : undefined,
             }
           : {}),
 
         emphasis: {
-          focus: "series",
+          focus: "none",
         },
       })),
-
     };
   }, [
     apiData,
@@ -388,11 +488,17 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
     tooltipBg,
     tooltipColor,
     legendColor,
+    stacked,
+    barWidth,
+    barGap,
+    barCategoryGap,
+    borderRadius,
+    isFullscreen,
   ]);
 
-  // -------------------------------
+  // --------------------------------------------------
   // Export PNG
-  // -------------------------------
+  // --------------------------------------------------
   const exportPNG = () => {
     const chart = chartRef.current?.getEchartsInstance();
     if (!chart) return;
@@ -409,30 +515,42 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
     link.click();
   };
 
-  // -------------------------------
+  // --------------------------------------------------
   // Export CSV
-  // -------------------------------
+  // --------------------------------------------------
   const exportCSV = () => {
     if (!apiData?.length) return;
 
     const rows: string[] = [];
-
     const header = ["Category"];
 
-    apiData.forEach((s: any) => header.push(s.name));
+    apiData.forEach((series: any) => {
+      header.push(series.name);
+    });
 
     rows.push(header.join(","));
 
-    const len =
-      apiData[0]?.data?.length || 0;
+    const len = apiData[0]?.data?.length || 0;
 
     for (let i = 0; i < len; i++) {
       const row: any[] = [];
 
-      row.push(category?.[i] ?? i);
+      const firstPoint = apiData[0]?.data?.[i];
 
-      apiData.forEach((s: any) => {
-        let value = s.data?.[i];
+      if (Array.isArray(firstPoint)) {
+        const timestamp = Number(firstPoint[0]);
+
+        row.push(
+          Number.isFinite(timestamp)
+            ? new Date(timestamp).toISOString()
+            : category?.[i] ?? i
+        );
+      } else {
+        row.push(category?.[i] ?? i);
+      }
+
+      apiData.forEach((series: any) => {
+        let value = series.data?.[i];
 
         if (Array.isArray(value)) {
           value = value[1];
@@ -449,20 +567,18 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
     });
 
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
 
     a.href = url;
     a.download = "chart.csv";
-
     a.click();
 
     URL.revokeObjectURL(url);
   };
 
-  // -------------------------------
-  // Parent Export Functions
-  // -------------------------------
+  // --------------------------------------------------
+  // Parent export functions
+  // --------------------------------------------------
   useEffect(() => {
     if (!onExportReady) return;
 
@@ -470,8 +586,11 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
       exportPNG,
       exportCSV,
     });
-  }, [onExportReady, apiData]);
+  }, [onExportReady, apiData, bg, category]);
 
+  // --------------------------------------------------
+  // Render
+  // --------------------------------------------------
   return (
     <div
       style={{
@@ -486,6 +605,44 @@ const ColumnGraph: React.FC<ColumnGraphProps> = ({
         option={option}
         notMerge={false}
         lazyUpdate={true}
+        onChartReady={(chart) => {
+          pointerFixCleanupRef.current?.();
+
+          const dom = chart.getDom();
+
+          const fixZrScale = (event: MouseEvent) => {
+            const rect = dom.getBoundingClientRect();
+
+            if (
+              !rect.width ||
+              !rect.height ||
+              !dom.offsetWidth ||
+              !dom.offsetHeight
+            ) {
+              return;
+            }
+
+            const scaleX = dom.offsetWidth / rect.width;
+            const scaleY = dom.offsetHeight / rect.height;
+            const pointerEvent = event as MouseEvent & {
+              zrX?: number;
+              zrY?: number;
+            };
+
+            pointerEvent.zrX =
+              (event.clientX - rect.left) * scaleX;
+            pointerEvent.zrY =
+              (event.clientY - rect.top) * scaleY;
+          };
+
+          dom.addEventListener("mousemove", fixZrScale, true);
+          dom.addEventListener("pointermove", fixZrScale, true);
+
+          pointerFixCleanupRef.current = () => {
+            dom.removeEventListener("mousemove", fixZrScale, true);
+            dom.removeEventListener("pointermove", fixZrScale, true);
+          };
+        }}
         style={{
           width: "100%",
           height: chartHeight,

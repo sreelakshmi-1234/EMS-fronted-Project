@@ -1,4 +1,10 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, {
+  useRef,
+  useState,
+  useEffect,
+  createContext,
+  useContext,
+} from 'react';
 import {
   Box,
   Flex,
@@ -27,6 +33,37 @@ import { EnlargeHeight, EnlargeWidth } from '../../../../Services/EnlargeWidget'
 import { SqeezIcon, ExpandIcon } from '../../../../assets/Icons';
 import { TimeWindow } from '../../../../Services/TimeWindow';
 import type { ExportFunctions } from '../../../../types/graphExport/export';
+import StaleIndicator from '../../../Common/GraphStaleIndicator';
+
+interface StaleContextType {
+  missingPoints: {
+    ts: number;
+    seriesName?: string;
+  }[];
+  setMissingPoints: React.Dispatch<
+    React.SetStateAction<
+      {
+        ts: number;
+        seriesName?: string;
+      }[]
+    >
+  >;
+}
+
+export const StaleContext =
+  createContext<StaleContextType | null>(null);
+
+export const useStaleContext = () => {
+  const context = useContext(StaleContext);
+
+  if (!context) {
+    throw new Error(
+      "useStaleContext must be used inside GraphLayout"
+    );
+  }
+
+  return context;
+};
 
 interface GraphLayoutProps {
   children: React.ReactNode;
@@ -38,9 +75,9 @@ interface GraphLayoutProps {
   boxShadow?: string;
   border?: string;
   fullScreen?: boolean | false;
-  width: string[] | number[];
+  width: string | string[] | number[];
   height: string | string[];
-  mt?: string | any[];
+  mt?: string | number | any[];
   px?: string;
   overflow?: string;
   infoSymbol?: boolean;
@@ -105,6 +142,12 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
   // Full Screen Logic
   const GraphLayoutRef = useRef<HTMLElement>(null) as React.RefObject<HTMLElement>;
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [missingPoints, setMissingPoints] = useState<
+    {
+      ts: number;
+      seriesName?: string;
+    }[]
+  >([]);
 
   // const handleFullScreen = () => {
   //   if (GraphLayoutRef.current) {
@@ -193,6 +236,10 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
             overflow="hidden"
           >
             {title}
+            <StaleIndicator
+              hasData={true}
+              missingPoints={missingPoints}
+            />
           </Box>
         </HStack>
 
@@ -260,15 +307,20 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
 
           {/* Download Menu */}
           {downloadOption && (
-            <Menu placement='bottom-start' strategy="fixed">
+            <Menu placement="bottom-end" strategy="fixed">
               <MenuButton
                 as={IconButton}
-                aria-label='Options'
-                icon={<HiOutlineDotsVertical size={isFullscreen ? EnlargeWidth(20) : 20} />}
-                variant='ghost'
-                size={"xs"}
-                _hover={{ bg: 'transparent', color: 'gray.500' }}
+                aria-label="Options"
+                icon={
+                  <HiOutlineDotsVertical
+                    size={isFullscreen ? EnlargeWidth(20) : 20}
+                  />
+                }
+                variant="ghost"
+                size="xs"
+                _hover={{ bg: "transparent", color: "gray.500" }}
               />
+
               <MenuList>
                 <MenuItem onClick={() => onExport?.exportPNG()}>
                   Download PNG
@@ -277,27 +329,33 @@ const GraphLayout: React.FC<GraphLayoutProps> = ({
                 <MenuItem onClick={() => onExport?.exportCSV()}>
                   Download CSV
                 </MenuItem>
-
               </MenuList>
             </Menu>
           )}
         </Flex>
       </Flex>
 
-      <Box
-        as="main"
-        pb={6}
-        height="calc(100% - 40px)"
-        width="100%"
-        mt={0}
-        overflow="visible"
-        {...contentProps}
+      <StaleContext.Provider
+        value={{
+          missingPoints,
+          setMissingPoints,
+        }}
       >
-        {React.isValidElement(children) &&
-          React.cloneElement(children as React.ReactElement<any>, {
-            isFullscreen,
-          })}
-      </Box>
+        <Box
+          as="main"
+          pb={6}
+          height="calc(100% - 40px)"
+          width="100%"
+          mt={0}
+          overflow="visible"
+          {...contentProps}
+        >
+          {React.isValidElement(children) &&
+            React.cloneElement(children as React.ReactElement<any>, {
+              isFullscreen,
+            })}
+        </Box>
+      </StaleContext.Provider>
     </Box>
   );
 };

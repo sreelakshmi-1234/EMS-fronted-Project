@@ -18,6 +18,9 @@ const PlantViewDashboard = () => {
     return (
         <Box
             width={"100%"}
+            height="fit-content"
+            minHeight="0"
+            overflow="hidden"
         >
             <HStack
                 width={"100%"}
@@ -50,18 +53,21 @@ const PlantViewDashboard = () => {
                 </Box>
             </HStack>
             <HStack
-                width={"100%"}
-                height={"1072px"}
-                gap={"10px"}
+                width="100%"
+                height="fit-content"
+                minHeight="0"
+                align="flex-start"
+                gap="10px"
             >
                 <VStack
-                    width={"1176px"}
-                    height={"100%"}
-                    gap={"10px"}
+                    width="1176px"
+                    height="fit-content"
+                    gap="10px"
+                    align="stretch"
                 >
                     <HStack
                         width={"100%"}
-                        height={"344px"}
+                        height={"312px"}
                         gap={"10px"}
                     >
                         <Box
@@ -79,7 +85,7 @@ const PlantViewDashboard = () => {
                     </HStack>
                     <HStack
                         width={"100%"}
-                        height={"344px"}
+                        height={"312px"}
                         gap={"10px"}
                     >
                         <Box
@@ -97,7 +103,7 @@ const PlantViewDashboard = () => {
                     </HStack>
                     <HStack
                         width={"100%"}
-                        height={"340px"}
+                        height={"316px"}
                         gap={"10px"}
                     >
                         <Box
@@ -115,9 +121,10 @@ const PlantViewDashboard = () => {
                     </HStack>
                 </VStack>   
                 <Box
-                    width={"666px"}
-                    height={"1072px"}
-                    mt={"40px"}
+                    width="666px"
+                    height="fit-content"
+                    minHeight="0"
+                    mt="40px"
                 >
                     <BatteryBanks />
                 </Box>
@@ -125,6 +132,5 @@ const PlantViewDashboard = () => {
         </Box>
     )
 };
-
 
 export default PlantViewDashboard;
