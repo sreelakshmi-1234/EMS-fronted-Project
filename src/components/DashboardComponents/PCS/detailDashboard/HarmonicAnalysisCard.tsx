@@ -121,7 +121,7 @@ const HarmonicAnalysisCard: React.FC<HarmonicAnalysisCardProps> = ({ deviceId })
     <>
       <GraphLayout
         title={<WidgetTitle>Harmonic Analysis (AC Side)</WidgetTitle>}
-        width={["480px"]}
+        width={["100%"]}
         height="310px"
         fullScreen
         timeWindow

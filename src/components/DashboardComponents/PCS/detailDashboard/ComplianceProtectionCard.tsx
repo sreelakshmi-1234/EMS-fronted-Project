@@ -51,7 +51,7 @@ const ComplianceProtectionCard = () => {
       p={4}
       h="320px"
       maxW="100%"
-      w="270px"
+      w="100%"
       display="flex"
       flexDirection="column"
     >
