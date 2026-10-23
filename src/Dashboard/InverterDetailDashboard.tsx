@@ -449,7 +449,7 @@ const InverterDetailDashboard: React.FC = () => {
           display: "grid",
 
           gridTemplateColumns:
-            "260px 1fr 1fr",
+            "260px minmax(0, 1fr) minmax(0, 2fr)",
 
           gap: "12px",
         }}
@@ -464,12 +464,6 @@ const InverterDetailDashboard: React.FC = () => {
 
             alignSelf:
               "start",
-
-            marginTop:
-              "-18px",
-
-            marginLeft:
-              "-198px",
           }}
         >
 

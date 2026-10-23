@@ -324,7 +324,7 @@ const TemperatureCard = ({
                 >
 
                   {item.value > 0
-                    ? item.value
+                    ? item.value.toFixed(2)
                     : "---"}
 
                   {

@@ -204,7 +204,9 @@ const ACOutputCard = ({ deviceId }: Props) => {
       return "---";
     }
 
-    return `${value} ${unit}`.trim();
+    const numericValue = Number(value);
+
+    return `${Number.isFinite(numericValue) ? numericValue.toFixed(2) : value} ${unit}`.trim();
   };
 
   const rightSectionData = [

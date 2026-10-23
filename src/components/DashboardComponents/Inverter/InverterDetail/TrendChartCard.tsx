@@ -553,9 +553,11 @@ const TrendChartCard = ({
         </Box>
       }
 
-      width={["990px"]}
+      width={["100%"]}
 
       height="344px"
+
+      WidgetProps={{ mt: 0 }}
 
       fullScreen
 

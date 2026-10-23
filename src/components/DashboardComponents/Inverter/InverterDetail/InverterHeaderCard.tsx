@@ -496,7 +496,7 @@ const InverterHeaderCard = ({
 
         <RowItem
           label="Operating Time"
-          value={`${deviceData?.Operating_Time?.[deviceData?.Operating_Time?.length - 1]?.value || 0} Hrs`}
+          value={`${Number(deviceData?.Operating_Time?.[deviceData?.Operating_Time?.length - 1]?.value || 0).toFixed(2)} Hrs`}
         />
 
         <RowItem

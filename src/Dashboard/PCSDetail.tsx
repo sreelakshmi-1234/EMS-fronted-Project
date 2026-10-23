@@ -114,7 +114,7 @@ const PCSDetail = () => {
   ) || deviceOptions[0];
 
   return (
-    <Box bg={bg} minH="100vh" p={4}>
+    <Box bg={bg} px={4} pt={4} pb={0}>
       <Flex justify="flex-start" mb={4}>
         <Flex align="center" gap={2}>
           <Text fontSize="12px" fontWeight="600" color={useColorModeValue("#64748B", "#94A3B8")}>
@@ -204,7 +204,8 @@ const PCSDetail = () => {
       {/* Last Row Full Width */}
       <Grid
         mt={4}
-        templateColumns="1.6fr 1fr 1fr 1fr"
+        w="100%"
+        templateColumns="minmax(0, 1.45fr) minmax(0, 1fr) minmax(0, 1.14fr) 230px"
         gap={4}
         alignItems="stretch"
       >
