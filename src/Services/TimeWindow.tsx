@@ -21,7 +21,7 @@ import {
     Tabs,
     useColorModeValue,
 } from "@chakra-ui/react";
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 
 interface TimeWindowProps {
     isOpen: boolean;
@@ -63,7 +63,6 @@ export const TimeWindow: React.FC<TimeWindowProps> = ({
     onSave,
     onReset,
     children,
-    inFullScreen = false,
     containerRef,
 }) => {
     const OverlayOne = () => (
@@ -76,6 +75,20 @@ export const TimeWindow: React.FC<TimeWindowProps> = ({
     const [overlay] = useState(<OverlayOne />);
 
     const [isOpen, setIsOpen] = useState(false);
+    const popoverContentRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const closeOnPageScroll = (event: Event) => {
+            const target = event.target;
+            if (target instanceof Node && popoverContentRef.current?.contains(target)) return;
+            setIsOpen(false);
+        };
+
+        window.addEventListener("scroll", closeOnPageScroll, true);
+        return () => window.removeEventListener("scroll", closeOnPageScroll, true);
+    }, [isOpen]);
 
     // Aggregation State
     const [aggFunc, setAggFunc] = useState<string>("none");
@@ -296,24 +309,18 @@ export const TimeWindow: React.FC<TimeWindowProps> = ({
             isOpen={isOpen}
             onOpen={() => setIsOpen(true)}
             onClose={() => setIsOpen(false)}
-            placement="bottom-start"
-            strategy="absolute"
-            gutter={12}
-            flip={false}
+            placement="bottom-end"
+            strategy="fixed"
+            gutter={8}
+            flip={true}
             boundary="clippingParents"
             modifiers={[
-                {
-                    name: "offset",
-                    options: {
-                        offset: [0, 180],
-                    },
-                },
                 {
                     name: "preventOverflow",
                     options: {
                         rootBoundary: "viewport",
                         tether: false,
-                        altAxis: false,
+                        altAxis: true,
                         padding: {
                             top: 80,
                             bottom: 16,
@@ -330,13 +337,32 @@ export const TimeWindow: React.FC<TimeWindowProps> = ({
                     {children}
                 </Box>
             </PopoverTrigger>
+            <Portal>
             <PopoverContent
+                ref={popoverContentRef}
                 color={useColorModeValue("#062D59", "#FFF")}
                 bg={useColorModeValue("#fff", "#131512")}
                 zIndex={9999}
                 maxHeight="70vh"
                 overflowY="auto"
-                mt={ inFullScreen ? -180 : 0}
+                sx={{
+                    transform: "scale(0.75)",
+                    transformOrigin: "top right",
+                    fontSize: "11px",
+                    minWidth: "260px",
+                    maxWidth: "260px",
+                    ".chakra-popover__header": { fontSize: "12px" },
+                    ".chakra-popover__body": { fontSize: "11px" },
+                    ".chakra-form__label": { fontSize: "11px" },
+                    ".chakra-input, .chakra-select": {
+                        height: "28px",
+                        fontSize: "11px",
+                    },
+                    ".chakra-popover__footer button": {
+                        height: "28px",
+                        fontSize: "11px",
+                    },
+                }}
             >
                 <PopoverHeader fontWeight={700} fontSize={14}>Time Window</PopoverHeader>
                 <PopoverCloseButton />
@@ -500,6 +526,7 @@ export const TimeWindow: React.FC<TimeWindowProps> = ({
                     </Box>
                 </PopoverFooter>
             </PopoverContent>
+            </Portal>
         </Popover>
     );
 };
